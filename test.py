@@ -1,12 +1,51 @@
 import tkinter as tk
 from tkinter import ttk
+from pydantic import BaseModel
+
+
+class Vehicle(BaseModel):
+    name: str
+    year: int
+    color: str
+    type: str
 
 
 class TreeviewEdit(ttk.Treeview):
-    def __init__(self, master, **kwargs):
+    def __init__(self, master, model, **kwargs):
         super().__init__(master, **kwargs)
+        self._model = model
+        self._populate_treeview(model)
         # bind mouse double click to self.on_double_click
         self.bind("<Double-1>", self.on_double_click, add="+")
+
+    def _populate_treeview(self, model):
+        # Create an instance of the Pydantic model to get the field names
+        instance = Vehicle(name="", year=0, color="", type="")
+        # Add columns to the treeview
+        self["columns"] = [
+            field.name for field in instance.__fields__.values() if field.name != "type"
+        ]
+        for col in self["columns"]:
+            self.heading(col, text=col.capitalize())
+
+        # Create a dictionary to group the vehicles by type
+        vehicles_by_type = {}
+        for item in model:
+            # Create an instance of the Pydantic model for each item in the list
+            vehicle = Vehicle(**item)
+            if vehicle.type not in vehicles_by_type:
+                vehicles_by_type[vehicle.type] = []
+            vehicles_by_type[vehicle.type].append(vehicle)
+
+        # Add data to the treeview
+        for vehicle_type, vehicles in vehicles_by_type.items():
+            type_node = self.insert("", tk.END, text=vehicle_type)
+            for vehicle in vehicles:
+                values = [
+                    str(getattr(vehicle, field.name))
+                    for field in vehicle.__fields__.values()
+                ]
+                self.insert(type_node, tk.END, text=vehicle.name, values=values)
 
     def on_double_click(self, event):
         # identify what region was Double clicked
@@ -93,12 +132,22 @@ class TreeviewEdit(ttk.Treeview):
             # Update the text of the selected iid (First item of the tree)
             self.item(selected_iid, text=new_text)
         else:
-            # Select the values of the selected iid
+            # Validate the entered value using the VehicleModel
             current_values = self.item(selected_iid).get("values")
-            # update the value of the selected column index
-            current_values[column_index - 1] = new_text
-            # Update the values of the selected iid in the tree view
-            self.item(selected_iid, values=current_values)
+            new_values = list(current_values)
+            new_values[column_index - 1] = new_text
+            try:
+                vehicle = Vehicle(
+                    vehicle_name=new_values[0], year=new_values[1], color=new_values[2]
+                )
+            except ValueError as error:
+                # If validation fails, show an error message and return
+                error_message = tk.Toplevel(self)
+                error_message.title("Error")
+                tk.Label(error_message, text=str(error)).pack()
+                return
+            # Update the values of the selected column index
+            self.item(selected_iid, values=new_values)
         # After updating the text, destroy the entry widget
         event.widget.destroy()
 
@@ -106,25 +155,41 @@ class TreeviewEdit(ttk.Treeview):
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Test TreeviewEdit")
-    # Add data to the treeview
-    column_names = ("vehicle_name", "year", "color")
 
-    treeview_vehicles = TreeviewEdit(root, columns=column_names)
-
-    treeview_vehicles.heading("#0", text="Vehicle Type")
-    treeview_vehicles.heading("vehicle_name", text="Vehicle Name")
-    treeview_vehicles.heading("year", text="Year")
-    treeview_vehicles.heading("color", text="Color")
-    # First element of the tree
-    sedan_row = treeview_vehicles.insert(parent="", index=tk.END, text="Sedan")
-    # Add data to the treeview
-    treeview_vehicles.insert(
-        parent=sedan_row, index=tk.END, values=("Nissan Versa", "2018", "Black")
-    )
-    treeview_vehicles.insert(
-        parent=sedan_row, index=tk.END, values=("Toyota Camry", "2019", "White")
-    )
-
-    treeview_vehicles.pack(fill=tk.BOTH, expand=True)
+    # Create data using the Pydantic model
+    vehicle_data = [
+        {
+            "name": "Nissan Versa",
+            "year": 2018,
+            "color": "Black",
+            "type": "Sedan",
+        },
+        {
+            "name": "Honda Civic",
+            "year": 2019,
+            "color": "White",
+            "type": "Sedan",
+        },
+        {
+            "name": "Toyota Corolla",
+            "year": 2020,
+            "color": "Red",
+            "type": "Sedan",
+        },
+        {
+            "name": "Ford Mustang",
+            "year": 2017,
+            "color": "Blue",
+            "type": "Muscle Car",
+        },
+        {
+            "name": "Chevrolet Camaro",
+            "year": 2015,
+            "color": "Yellow",
+            "type": "Muscle Car",
+        },
+    ]
+    treeview_edit = TreeviewEdit(root, vehicle_data)
+    treeview_edit.pack(expand=True, fill="both")
 
     root.mainloop()
