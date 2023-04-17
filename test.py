@@ -21,7 +21,7 @@ class TreeviewEdit(ttk.Treeview):
     def _populate_treeview(self, model):
         # Create an instance of the Pydantic model to get the field names
         instance = Vehicle(name="", year=0, color="", type="")
-        # Add columns to the treeview
+        # Add columns to the treeview, except the type field (this is used to group the vehicles)
         self["columns"] = [
             field.name for field in instance.__fields__.values() if field.name != "type"
         ]
