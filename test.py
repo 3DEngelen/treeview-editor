@@ -106,7 +106,7 @@ class TreeviewEdit(ttk.Treeview):
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Test TreeviewEdit")
-
+    # Add data to the treeview
     column_names = ("vehicle_name", "year", "color")
 
     treeview_vehicles = TreeviewEdit(root, columns=column_names)
@@ -115,9 +115,9 @@ if __name__ == "__main__":
     treeview_vehicles.heading("vehicle_name", text="Vehicle Name")
     treeview_vehicles.heading("year", text="Year")
     treeview_vehicles.heading("color", text="Color")
-
+    # First element of the tree
     sedan_row = treeview_vehicles.insert(parent="", index=tk.END, text="Sedan")
-
+    # Add data to the treeview
     treeview_vehicles.insert(
         parent=sedan_row, index=tk.END, values=("Nissan Versa", "2018", "Black")
     )
